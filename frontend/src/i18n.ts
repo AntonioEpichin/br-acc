@@ -13,6 +13,7 @@ const resources = {
       nav: {
         search: "Buscar",
         graph: "Grafo",
+        patterns: "Padrões",
         investigations: "Investigações",
       },
       search: {
@@ -45,6 +46,13 @@ const resources = {
         entityTypes: "Tipos de entidade",
         noData: "Nenhum dado de grafo disponível.",
       },
+      patterns: {
+        title: "Padrões de Análise",
+        selectEntity: "Selecione uma entidade para analisar padrões.",
+        noResults: "Nenhum padrão encontrado para esta entidade.",
+        loadError: "Erro ao carregar padrões.",
+        runError: "Erro ao analisar padrões.",
+      },
       common: {
         source: "Fonte",
         confidence: "Confiança",
@@ -65,6 +73,7 @@ const resources = {
       nav: {
         search: "Search",
         graph: "Graph",
+        patterns: "Patterns",
         investigations: "Investigations",
       },
       search: {
@@ -96,6 +105,13 @@ const resources = {
         depth: "Depth",
         entityTypes: "Entity types",
         noData: "No graph data available.",
+      },
+      patterns: {
+        title: "Analysis Patterns",
+        selectEntity: "Select an entity to analyze patterns.",
+        noResults: "No patterns found for this entity.",
+        loadError: "Failed to load patterns.",
+        runError: "Failed to run pattern analysis.",
       },
       common: {
         source: "Source",

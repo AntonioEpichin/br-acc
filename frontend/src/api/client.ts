@@ -88,6 +88,47 @@ export function getEntity(id: string): Promise<EntityDetail> {
   return apiFetch<EntityDetail>(`/api/v1/entity/${encodeURIComponent(id)}`);
 }
 
+export interface PatternInfo {
+  id: string;
+  name_pt: string;
+  name_en: string;
+  description_pt: string;
+  description_en: string;
+}
+
+export interface PatternListResponse {
+  patterns: PatternInfo[];
+}
+
+export interface PatternResult {
+  pattern_id: string;
+  pattern_name: string;
+  description: string;
+  data: Record<string, unknown>;
+  entity_ids: string[];
+  sources: { database: string }[];
+}
+
+export interface PatternResponse {
+  entity_id: string | null;
+  patterns: PatternResult[];
+  total: number;
+}
+
+export function listPatterns(): Promise<PatternListResponse> {
+  return apiFetch<PatternListResponse>("/api/v1/patterns/");
+}
+
+export function getEntityPatterns(
+  entityId: string,
+  lang = "pt",
+): Promise<PatternResponse> {
+  const params = new URLSearchParams({ lang });
+  return apiFetch<PatternResponse>(
+    `/api/v1/patterns/${encodeURIComponent(entityId)}?${params}`,
+  );
+}
+
 export function getGraphData(
   entityId: string,
   depth = 1,
