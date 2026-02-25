@@ -14,8 +14,8 @@ CREATE CONSTRAINT contract_contract_id_unique IF NOT EXISTS
 CREATE CONSTRAINT sanction_sanction_id_unique IF NOT EXISTS
   FOR (s:Sanction) REQUIRE s.sanction_id IS UNIQUE;
 
-CREATE CONSTRAINT public_office_cpf_unique IF NOT EXISTS
-  FOR (po:PublicOffice) REQUIRE po.cpf IS UNIQUE;
+CREATE CONSTRAINT public_office_id_unique IF NOT EXISTS
+  FOR (po:PublicOffice) REQUIRE po.office_id IS UNIQUE;
 
 CREATE CONSTRAINT investigation_id_unique IF NOT EXISTS
   FOR (i:Investigation) REQUIRE i.id IS UNIQUE;
@@ -140,6 +140,14 @@ CREATE INDEX laborstats_uf IF NOT EXISTS
 
 CREATE INDEX laborstats_cnae_subclass IF NOT EXISTS
   FOR (l:LaborStats) ON (l.cnae_subclass);
+
+// ── Person Servidor ID Index ────────────────────────────
+CREATE INDEX person_servidor_id IF NOT EXISTS
+  FOR (p:Person) ON (p.servidor_id);
+
+// ── PublicOffice Indexes ────────────────────────────────
+CREATE INDEX public_office_org IF NOT EXISTS
+  FOR (po:PublicOffice) ON (po.org);
 
 // ── Fulltext Search Index ───────────────────────────────
 CREATE FULLTEXT INDEX entity_search IF NOT EXISTS

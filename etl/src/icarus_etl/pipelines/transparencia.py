@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -15,7 +16,6 @@ from icarus_etl.transforms import (
     cap_contract_value,
     deduplicate_rows,
     format_cnpj,
-    format_cpf,
     normalize_name,
     parse_date,
     strip_document,
@@ -52,6 +52,18 @@ def _extract_cpf_middle6(cpf_raw: str) -> str | None:
     if len(digits) == 6:
         return digits
     return None
+
+
+def _make_servidor_id(cpf_partial: str | None, name: str) -> str:
+    """Generate stable ID for servidor Person from partial CPF + name."""
+    raw = f"{cpf_partial or ''}_{name}"
+    return hashlib.sha256(raw.encode()).hexdigest()[:16]
+
+
+def _make_office_id(cpf_partial: str | None, name: str, org: str) -> str:
+    """Generate stable ID for PublicOffice from partial CPF + name + org."""
+    raw = f"{cpf_partial or ''}_{name}_{org}"
+    return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
 class TransparenciaPipeline(Pipeline):
@@ -126,14 +138,23 @@ class TransparenciaPipeline(Pipeline):
         offices: list[dict[str, Any]] = []
         for _, row in self._raw_servidores.iterrows():
             raw_cpf = str(row["cpf"])
+            cpf_partial = _extract_cpf_middle6(raw_cpf)
+            name = normalize_name(str(row["nome"]))
+            org = normalize_name(str(row["orgao"]))
+            salary = _parse_brl(str(row["remuneracao"]))
+
+            servidor_id = _make_servidor_id(cpf_partial, name)
+            office_id = _make_office_id(cpf_partial, name, org)
+
             offices.append({
-                "cpf": format_cpf(raw_cpf),
-                "cpf_partial": _extract_cpf_middle6(raw_cpf),
-                "name": normalize_name(str(row["nome"])),
-                "org": normalize_name(str(row["orgao"])),
-                "salary": _parse_brl(str(row["remuneracao"])),
+                "office_id": office_id,
+                "servidor_id": servidor_id,
+                "cpf_partial": cpf_partial,
+                "name": name,
+                "org": org,
+                "salary": salary,
             })
-        self.offices = deduplicate_rows(offices, ["cpf"])
+        self.offices = deduplicate_rows(offices, ["office_id"])
 
         amendments: list[dict[str, Any]] = []
         for _, row in self._raw_emendas.iterrows():
@@ -189,29 +210,49 @@ class TransparenciaPipeline(Pipeline):
             )
 
         if self.offices:
-            loader.load_nodes("PublicOffice", self.offices, key_field="cpf")
+            # PublicOffice nodes — keyed on office_id (hash of cpf_partial+name+org)
+            po_query = (
+                "UNWIND $rows AS row "
+                "MERGE (po:PublicOffice {office_id: row.office_id}) "
+                "SET po.cpf_partial = row.cpf_partial, po.name = row.name, "
+                "po.org = row.org, po.salary = row.salary"
+            )
+            loader.run_query(po_query, self.offices)
 
-            # Ensure Person nodes exist (include cpf_partial for SAME_AS matching)
+            # Person nodes — keyed on servidor_id (hash of cpf_partial+name)
+            # DO NOT set cpf — would conflict with uniqueness constraint
             persons = deduplicate_rows(
                 [
-                    {"name": o["name"], "cpf": o["cpf"], "cpf_partial": o["cpf_partial"]}
+                    {
+                        "servidor_id": o["servidor_id"],
+                        "cpf_partial": o["cpf_partial"],
+                        "name": o["name"],
+                    }
                     for o in self.offices
                 ],
-                ["cpf"],
+                ["servidor_id"],
             )
-            loader.load_nodes("Person", persons, key_field="cpf")
+            person_query = (
+                "UNWIND $rows AS row "
+                "MERGE (p:Person {servidor_id: row.servidor_id}) "
+                "SET p.cpf_partial = row.cpf_partial, p.name = row.name, "
+                "p.source = 'portal_transparencia'"
+            )
+            loader.run_query(person_query, persons)
 
             # RECEBEU_SALARIO: Person -> PublicOffice
-            loader.load_relationships(
-                rel_type="RECEBEU_SALARIO",
-                rows=[
-                    {"source_key": o["cpf"], "target_key": o["cpf"]}
+            rel_query = (
+                "UNWIND $rows AS row "
+                "MATCH (p:Person {servidor_id: row.servidor_id}) "
+                "MATCH (po:PublicOffice {office_id: row.office_id}) "
+                "MERGE (p)-[:RECEBEU_SALARIO]->(po)"
+            )
+            loader.run_query(
+                rel_query,
+                [
+                    {"servidor_id": o["servidor_id"], "office_id": o["office_id"]}
                     for o in self.offices
                 ],
-                source_label="Person",
-                source_key="cpf",
-                target_label="PublicOffice",
-                target_key="cpf",
             )
 
         if self.amendments:

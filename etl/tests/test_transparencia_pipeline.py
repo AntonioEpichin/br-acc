@@ -6,6 +6,8 @@ from unittest.mock import MagicMock
 from icarus_etl.pipelines.transparencia import (
     TransparenciaPipeline,
     _extract_cpf_middle6,
+    _make_office_id,
+    _make_servidor_id,
     _parse_brl,
 )
 
@@ -116,7 +118,8 @@ def test_transform_normalizes_server_names() -> None:
 
     assert len(pipeline.offices) == 2
     assert pipeline.offices[0]["name"] == "MARIA DA SILVA SANTOS"
-    assert pipeline.offices[0]["cpf"] == "123.456.789-01"
+    assert "servidor_id" in pipeline.offices[0]
+    assert "office_id" in pipeline.offices[0]
 
 
 def test_transform_creates_amendment_nodes() -> None:
@@ -261,6 +264,39 @@ def test_extract_cpf_middle6_malformed_returns_none() -> None:
     assert _extract_cpf_middle6("1234567") is None
 
 
+def test_transform_hash_ids_avoid_cpf_collisions() -> None:
+    """Different people sharing same 6-digit partial CPF get unique servidor_ids."""
+    import pandas as pd
+
+    pipeline = _make_pipeline()
+    _extract_from_fixtures(pipeline)
+
+    # Two different people with same partial CPF
+    pipeline._raw_servidores = pd.DataFrame([
+        {
+            "cpf": "***.017.623-**",
+            "nome": "Ana Souza",
+            "orgao": "STF",
+            "remuneracao": "30.000,00",
+        },
+        {
+            "cpf": "***.017.623-**",
+            "nome": "Carlos Lima",
+            "orgao": "STF",
+            "remuneracao": "25.000,00",
+        },
+    ])
+
+    pipeline.transform()
+
+    assert len(pipeline.offices) == 2
+    ids = {o["servidor_id"] for o in pipeline.offices}
+    assert len(ids) == 2  # Different people → different servidor_ids
+
+    office_ids = {o["office_id"] for o in pipeline.offices}
+    assert len(office_ids) == 2  # Different people → different office_ids
+
+
 def test_transform_adds_cpf_partial_for_masked_cpf() -> None:
     """Masked CPFs in servidores should produce cpf_partial in transform output."""
     import pandas as pd
@@ -295,11 +331,15 @@ def test_transform_adds_cpf_partial_for_masked_cpf() -> None:
     # Masked CPF → cpf_partial extracted
     toffoli = next(o for o in pipeline.offices if o["name"] == "JOSE DIAS TOFFOLI")
     assert toffoli["cpf_partial"] == "017623"
+    assert toffoli["servidor_id"] == _make_servidor_id("017623", "JOSE DIAS TOFFOLI")
+    assert toffoli["office_id"] == _make_office_id("017623", "JOSE DIAS TOFFOLI", "STF")
 
     # Full CPF → cpf_partial is None
     maria = next(o for o in pipeline.offices if o["name"] == "MARIA DA SILVA SANTOS")
     assert maria["cpf_partial"] is None
+    assert maria["servidor_id"] == _make_servidor_id(None, "MARIA DA SILVA SANTOS")
 
     # Blank CPF → cpf_partial is None
     agente = next(o for o in pipeline.offices if o["name"] == "AGENTE SIGILOSO")
     assert agente["cpf_partial"] is None
+    assert agente["servidor_id"] == _make_servidor_id(None, "AGENTE SIGILOSO")

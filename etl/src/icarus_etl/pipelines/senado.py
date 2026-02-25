@@ -65,6 +65,7 @@ class SenadoPipeline(Pipeline):
         self._raw: pd.DataFrame = pd.DataFrame()
         self.expenses: list[dict[str, Any]] = []
         self.suppliers: list[dict[str, Any]] = []
+        self.gastou_rels: list[dict[str, Any]] = []
         self.forneceu_rels: list[dict[str, Any]] = []
 
     def extract(self) -> None:
@@ -96,6 +97,7 @@ class SenadoPipeline(Pipeline):
 
         expenses: list[dict[str, Any]] = []
         suppliers_map: dict[str, dict[str, Any]] = {}
+        gastou: list[dict[str, Any]] = []
         forneceu: list[dict[str, Any]] = []
         skipped = 0
 
@@ -139,6 +141,13 @@ class SenadoPipeline(Pipeline):
                 "source": "senado",
             })
 
+            # Track senator -> expense
+            if senator_name:
+                gastou.append({
+                    "senator_name": senator_name,
+                    "target_key": expense_id,
+                })
+
             # Track supplier
             if len(supplier_digits) == 14:
                 suppliers_map[supplier_doc] = {
@@ -158,6 +167,7 @@ class SenadoPipeline(Pipeline):
 
         self.expenses = deduplicate_rows(expenses, ["expense_id"])
         self.suppliers = list(suppliers_map.values())
+        self.gastou_rels = gastou
         self.forneceu_rels = forneceu
 
         if self.limit:
@@ -203,6 +213,20 @@ class SenadoPipeline(Pipeline):
         if person_suppliers:
             count = loader.load_nodes("Person", person_suppliers, key_field="cpf")
             logger.info("Merged %d supplier Person nodes", count)
+
+        # GASTOU: Person (senator) -> Expense
+        # Senators lack CPF in CEAPS data — match by normalized name,
+        # restricted to known candidates to avoid false matches.
+        if self.gastou_rels:
+            query = (
+                "UNWIND $rows AS row "
+                "MATCH (e:Expense {expense_id: row.target_key}) "
+                "MATCH (p:Person {name: row.senator_name}) "
+                "WHERE (p)-[:CANDIDATO_EM]->(:Election) "
+                "MERGE (p)-[:GASTOU]->(e)"
+            )
+            count = loader.run_query(query, self.gastou_rels)
+            logger.info("Created %d GASTOU relationships", count)
 
         # FORNECEU: Company/Person -> Expense
         if self.forneceu_rels:
