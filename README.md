@@ -1,7 +1,5 @@
 # World Transparency Graph (WTG) — Icarus Core
 
-Plataforma global de análise de grafos de dados públicos.
-
 Global public-data graph analysis platform.
 
 [![CI](https://github.com/brunoclz/world-transparency-graph/actions/workflows/ci.yml/badge.svg)](https://github.com/brunoclz/world-transparency-graph/actions/workflows/ci.yml)
@@ -9,23 +7,19 @@ Global public-data graph analysis platform.
 
 ---
 
-## O que é / What it is
-
-WTG (powered by Icarus Core) ingere dados de registros públicos e permite a exploração visual de conexões entre empresas, contratos, eleições e sanções.
+## What it is
 
 WTG (powered by Icarus Core) ingests public records and enables visual exploration of connections between companies, contracts, elections, and sanctions.
 
-**Dados de registros públicos. Não constitui acusação.**
-
 **Data patterns from public records. Not accusations.**
 
-## Modelo de marca / Brand model
+## Brand model
 
-- Produto público: **World Transparency Graph (WTG)**
-- Movimento cívico: **BRCC**
-- Engine institucional: **Icarus Core**
+- Public product: **World Transparency Graph (WTG)**
+- Civic movement: **BRCC**
+- Advanced engine: **Icarus Core**
 
-## Arquitetura / Architecture
+## Architecture
 
 ```
 ┌─────────────┐     ┌──────────────┐     ┌──────────────┐
@@ -42,7 +36,7 @@ WTG (powered by Icarus Core) ingests public records and enables visual explorati
                     └─────────────┘
 ```
 
-| Camada / Layer | Tecnologia / Tech |
+| Layer | Technology |
 |---|---|
 | Graph DB | Neo4j 5 Community |
 | Backend | FastAPI (Python 3.12+, async) |
@@ -50,19 +44,19 @@ WTG (powered by Icarus Core) ingests public records and enables visual explorati
 | ETL | Python (pandas, httpx) |
 | Entity Resolution | splink 4 (optional) |
 | Infra | Docker Compose |
-| i18n | PT-BR (padrão), EN |
+| i18n | EN (default), PT-BR |
 
-## Início rápido / Quick start
+## Quick start
 
 ```bash
-# Pré-requisitos: Docker, Node 22+, Python 3.12+, uv
+# Prerequisites: Docker, Node 22+, Python 3.12+, uv
 cp .env.example .env
-# Edite .env com sua senha Neo4j
+# Edit .env with your Neo4j password
 
-# Subir stack completa
+# Start full stack
 make dev
 
-# Carregar dados de desenvolvimento
+# Load development seed data
 export NEO4J_PASSWORD=your_password
 make seed
 
@@ -71,65 +65,76 @@ make seed
 # Neo4j Browser: http://localhost:7474
 ```
 
-## Desenvolvimento / Development
+## Development
 
 ```bash
-# Instalar dependências
+# Install dependencies
 cd api && uv sync --dev
 cd etl && uv sync --dev
 cd frontend && npm install
 
-# Rodar serviços individuais
-make api           # FastAPI com hot reload
+# Run individual services
+make api           # FastAPI with hot reload
 make frontend      # Vite dev server
 
 # ETL
-cd etl && uv run icarus-etl sources   # Listar pipelines
+cd etl && uv run icarus-etl sources   # List pipelines
 cd etl && uv run icarus-etl run --source cnpj --neo4j-password $NEO4J_PASSWORD
 
-# Verificações de qualidade (rodar antes de commit)
+# Quality checks (run before commit)
 make check         # lint + types + tests
-make neutrality    # auditoria de palavras proibidas
+make neutrality    # prohibited-word audit
 ```
 
-## Testes / Tests
+## Tests
 
 ```bash
-make test          # Todos (API + ETL + Frontend)
-make test-api      # 79 testes Python
-make test-etl      # 63 testes Python
-make test-frontend # 20 testes TypeScript
+make test          # All (API + ETL + Frontend)
+make test-api      # Python API tests
+make test-etl      # Python ETL tests
+make test-frontend # TypeScript frontend tests
 ```
 
-## Padrões de análise / Analysis patterns
+## Analysis patterns
 
-| ID | PT-BR | EN |
-|---|---|---|
-| p01 | Emenda autodirecionada | Self-dealing amendment |
-| p05 | Incompatibilidade patrimonial | Patrimony incompatibility |
-| p06 | Sancionada ainda recebendo | Sanctioned still receiving |
-| p10 | Ciclo doação-contrato | Donation-contract loop |
-| p12 | Concentração de contratos | Contract concentration |
+| ID | Pattern |
+|---|---|
+| p01 | Self-dealing amendment |
+| p05 | Patrimony incompatibility |
+| p06 | Sanctioned still receiving |
+| p10 | Donation-contract loop |
+| p12 | Contract concentration |
 
 ## Public mode contract
 
-WTG Open deve rodar com defaults públicos:
+WTG Open should run with the following safe defaults:
 
 - `PUBLIC_MODE=true`
 - `PUBLIC_ALLOW_PERSON=false`
 - `PUBLIC_ALLOW_ENTITY_LOOKUP=false`
 - `PUBLIC_ALLOW_INVESTIGATIONS=false`
 
-Com isso, o modo público não retorna nós de PF (`Person`/`Partner`) nem propriedades pessoais.
+With these defaults, public mode does not return personal-entity nodes (`Person`/`Partner`) or personal document properties.
 
-## Endpoints da API / API endpoints
+## Legal & Ethics
 
-| Método | Rota | Descrição |
+- [ETHICS.md](ETHICS.md)
+- [LGPD.md](LGPD.md)
+- [PRIVACY.md](PRIVACY.md)
+- [TERMS.md](TERMS.md)
+- [DISCLAIMER.md](DISCLAIMER.md)
+- [SECURITY.md](SECURITY.md)
+- [ABUSE_RESPONSE.md](ABUSE_RESPONSE.md)
+- [docs/legal/legal-index.md](docs/legal/legal-index.md)
+
+## API endpoints
+
+| Method | Route | Description |
 |---|---|---|
 | GET | `/health` | Health check |
-| GET | `/api/v1/public/meta` | Métricas agregadas e saúde de fontes |
-| GET | `/api/v1/public/patterns/company/{cnpj_or_id}` | Sinais públicos por empresa |
-| GET | `/api/v1/public/graph/company/{cnpj_or_id}` | Subgrafo público de empresa |
+| GET | `/api/v1/public/meta` | Aggregated metrics and source health |
+| GET | `/api/v1/public/patterns/company/{cnpj_or_id}` | Public risk signals for a company |
+| GET | `/api/v1/public/graph/company/{cnpj_or_id}` | Public company subgraph |
 
 ### Advanced-only surface (internal deployment)
 
@@ -139,7 +144,7 @@ Com isso, o modo público não retorna nós de PF (`Person`/`Partner`) nem propr
 - `/api/v1/patterns/*`
 - `/api/v1/investigations/*`
 
-## Estrutura / Project structure
+## Project structure
 
 ```
 CORRUPTOS/
@@ -149,11 +154,11 @@ CORRUPTOS/
 │   │   ├── services/     # Business logic
 │   │   ├── queries/      # 27 .cypher files
 │   │   ├── models/       # Pydantic models
-│   │   └── middleware/    # CPF masking
+│   │   └── middleware/   # CPF masking
 │   └── tests/            # 79 unit tests
 ├── etl/                  # ETL pipelines
 │   ├── src/icarus_etl/
-│   │   ├── pipelines/    # CNPJ, TSE, Transparência, Sanctions
+│   │   ├── pipelines/    # CNPJ, TSE, transparency, sanctions
 │   │   ├── transforms/   # Name norm, doc formatting, dedup
 │   │   └── entity_resolution/  # splink config
 │   └── tests/            # 63 unit tests
@@ -166,6 +171,6 @@ CORRUPTOS/
 └── .github/workflows/    # CI pipeline
 ```
 
-## Licença / License
+## License
 
 [GNU Affero General Public License v3.0](LICENSE)

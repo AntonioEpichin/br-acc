@@ -48,6 +48,7 @@ rsync -a \
   --include='.github/***' \
   --include='scripts/' \
   --include='scripts/check_public_privacy.py' \
+  --include='scripts/check_compliance_pack.py' \
   --include='scripts/generate_demo_dataset.py' \
   --include='scripts/link_persons.cypher' \
   --include='scripts/prepare_public_snapshot.sh' \
@@ -55,6 +56,13 @@ rsync -a \
   --include='data/demo/' \
   --include='data/demo/***' \
   --include='README.md' \
+  --include='ETHICS.md' \
+  --include='LGPD.md' \
+  --include='PRIVACY.md' \
+  --include='TERMS.md' \
+  --include='DISCLAIMER.md' \
+  --include='SECURITY.md' \
+  --include='ABUSE_RESPONSE.md' \
   --include='LICENSE' \
   --include='.env.example' \
   --include='.gitignore' \

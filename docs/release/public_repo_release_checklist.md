@@ -46,8 +46,17 @@ Require all checks:
 
 ## 7) Final checks before launch
 - `python scripts/check_public_privacy.py --repo-root .` => `PASS`
+- `python scripts/check_compliance_pack.py --repo-root .` => `PASS`
 - Confirm no internal runbooks in public repo
 - Confirm demo data is synthetic (`data/demo/synthetic_graph.json`)
+- Confirm all legal docs exist in root:
+  - `ETHICS.md`
+  - `LGPD.md`
+  - `PRIVACY.md`
+  - `TERMS.md`
+  - `DISCLAIMER.md`
+  - `SECURITY.md`
+  - `ABUSE_RESPONSE.md`
 
 ## 8) Launch communication split
 - Publish product announcement as **WTG**
